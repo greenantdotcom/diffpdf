@@ -44,6 +44,7 @@
 #include <QSettings>
 #include <QSpinBox>
 #include <QSplitter>
+#include <QTextStream>
 
 
 MainWindow::MainWindow(const Debug debug,
@@ -1369,18 +1370,29 @@ QList<int> MainWindow::getPageList(int which, PdfDocument pdf)
 
 void MainWindow::compare()
 {
-    if (compareButton->text() == tr("&Cancel")) {
-        cancel = true;
-        compareButton->setText(tr("&Compare"));
-        compareButton->setEnabled(true);
-        return;
-    }
+    QTextStream out(stdout);
+
+    // if (compareButton->text() == tr("&Cancel")) {
+    //     out << "WTF\n";
+
+    //     cancel = true;
+    //     compareButton->setText(tr("&Compare"));
+    //     compareButton->setEnabled(true);
+    //     return;
+    // }
+
+        out << "Nope - we are good…\n";
     cancel = false;
     QString filename1 = filename1LineEdit->text();
+
+    out << "PDF1 --> " << filename1 << "\n";
+
     PdfDocument pdf1 = getPdf(filename1);
     if (!pdf1)
         return;
+
     QString filename2 = filename2LineEdit->text();
+    out << "PDF2 --> " << filename2 << "\n";
     PdfDocument pdf2 = getPdf(filename2);
     if (!pdf2) {
         return;
@@ -1392,7 +1404,9 @@ void MainWindow::compare()
     const QPair<int, int> pair = comparePages(filename1, pdf1, filename2,
                                               pdf2);
     compareUpdateUi(pair, time.elapsed());
-}
+
+    out << "Done comparing update UI()" << time.elapsed() << "\n";
+    }
 
 
 void MainWindow::comparePrepareUi()
@@ -1412,15 +1426,24 @@ const QPair<int, int> MainWindow::comparePages(const QString &filename1,
         const PdfDocument &pdf1, const QString &filename2,
         const PdfDocument &pdf2)
 {
+    QTextStream out(stdout);
+
+    out << "Comparing documents…\n";
+
     QList<int> pages1 = getPageList(1, pdf1);
     QList<int> pages2 = getPageList(2, pdf2);
     int total = qMin(pages1.count(), pages2.count());
     int number = 0;
     int index = 0;
+    out << "min pages == " << total << "\n";
     while (!pages1.isEmpty() && !pages2.isEmpty()) {
+        out << "  -> Next page…\n";
+
         int p1 = pages1.takeFirst();
         PdfPage page1(pdf1->page(p1));
         if (!page1) {
+            out << "Failed to read page from pdf1\n";
+
             writeError(tr("Failed to read page %1 from '%2'.")
                           .arg(p1 + 1).arg(filename1));
             continue;
@@ -1428,6 +1451,8 @@ const QPair<int, int> MainWindow::comparePages(const QString &filename1,
         int p2 = pages2.takeFirst();
         PdfPage page2(pdf2->page(p2));
         if (!page2) {
+            out << "Failed to read page from pdf2\n";
+            
             writeError(tr("Failed to read page %1 from '%2'.")
                           .arg(p2 + 1).arg(filename2));
             continue;
@@ -1435,20 +1460,30 @@ const QPair<int, int> MainWindow::comparePages(const QString &filename1,
         writeLine(tr("Comparing: %1 vs. %2.").arg(p1 + 1).arg(p2 + 1));
         QApplication::processEvents();
         if (cancel) {
+            out << "Cancelled…\n";
+            
             writeError(tr("Cancelled."));
             break;
         }
         Difference difference = getTheDifference(page1, page2);
         if (difference != NoDifference) {
+            out << "Difference…\n";
+
             QVariant v;
             v.setValue(PagePair(p1, p2, difference == VisualDifference));
             viewDiffComboBox->addItem(tr("%1 vs. %2 %3 %4")
                     .arg(p1 + 1).arg(p2 + 1).arg(QChar(0x2022))
                     .arg(++index), v);
         }
+        else{
+            out << "No difference…\n";
+        }
         statusLabel->setText(tr("Comparing %1/%2").arg(++number)
                                                   .arg(total));
     }
+
+    out << "Done…\n";
+
     return qMakePair(number, total);
 }
 
@@ -1685,6 +1720,7 @@ void MainWindow::saveAsPdf(const int start, const int end,
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setColorMode(QPrinter::Color);
     printer.setCreator(tr("DiffPDF"));
+    printer.setCreator("Hello world");
     printer.setOrientation(savePages == SaveBothPages
             ? QPrinter::Landscape : QPrinter::Portrait);
     QPainter painter(&printer);
@@ -1702,10 +1738,17 @@ void MainWindow::saveAsPdf(const int start, const int end,
         width = painter.viewport().width();
     const QRect leftRect(0, y, width, height);
     const QRect rightRect(width + gap, y, width, height);
+    QTextStream out(stdout);
+
     for (int index = start; index < end; ++index) {
+        out << "Outputting index " << index << "\n";
+
         if (!paintSaveAs(&painter, index, pdf1, pdf2, header, rect,
-                    leftRect, rightRect))
+                    leftRect, rightRect)){
+            out << "SKIPPING - WHY?\n";
             continue;
+        }
+
         if (index + 1 < end)
             printer.newPage();
     }
@@ -1719,6 +1762,12 @@ bool MainWindow::paintSaveAs(QPainter *painter, const int index,
 {
     PagePair pair = viewDiffComboBox->itemData(index)
         .value<PagePair>();
+
+    QTextStream out(stdout);
+
+    // if(pair.isNull())
+    //     out << "PAIR IS NULL\n";
+
     if (pair.isNull())
         return false;
     PdfPage page1(pdf1->page(pair.left));

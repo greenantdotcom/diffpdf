@@ -45,6 +45,8 @@ class QSplitter;
 
 class MainWindow : public QMainWindow
 {
+    friend int main(int argc, char *argv[]);
+
     Q_OBJECT
 
 public:
@@ -85,7 +87,7 @@ private slots:
     void showMargins();
     void setAMargin(const QPoint &pos);
 
-private:
+protected:
     enum Difference {NoDifference, TextualDifference, VisualDifference};
 
     void createWidgets(const QString &filename1, const QString &filename2);

@@ -81,27 +81,27 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     QStringList args = app.arguments().mid(1);
-
+    
     // Comparison mode
     /* TODO: HACKED TO ONLY DO WHAT WE WANT… */
 	// InitialComparisonMode comparisonMode = static_cast<InitialComparisonMode>(settings.value("InitialComparisonMode", CompareWords).toInt());
 	InitialComparisonMode comparisonMode = CompareAppearance;
-
+    
 	// Language
 	QString language = QLocale::system().name();
     
     QString filename1;
     QString filename2;
 	QString outputFilename;
-
+    QString *header = new QString( "" );
+    
     bool optionsOK = true;
     Debug debug = DebugOff;
-
+    
     const QString LanguageOption = "--language=";
-    const QString header = "Hello world - welcome to cli land";
-
+    
     QTextStream out(stdout);
-
+    
     foreach (const QString arg, args) {
         if (optionsOK && (arg == "--appearance" || arg == "-a"))
             comparisonMode = CompareAppearance;
@@ -112,11 +112,9 @@ int main(int argc, char *argv[])
         else if (optionsOK && arg.startsWith(LanguageOption))
             language = arg.mid(LanguageOption.length());
         else if (optionsOK && (arg == "--help" || arg == "-h")) {
-            out << "usage: diffpdf [options] [file1.pdf [file2.pdf]]\n\n"
-                "A GUI program that compares two PDF files and shows "
-                "their differences.\n"
-                "\nThe files are optional and are normally set "
-                "through the user interface.\n\n"
+            out << "usage: diffpdf [options] file1.pdf file2.pdf output.pdf HEADER_STRING\n\n"
+                "A GUI program that compares two PDF files and stores "
+                "their differences into a third file.\n"
                 "options:\n"
                 "--help        -h   show this usage text and terminate "
                 "(run the program without this option and press F1 for "
@@ -156,10 +154,12 @@ int main(int argc, char *argv[])
             filename2 = arg;
         else if (outputFilename.isEmpty() && arg.toLower().endsWith(".pdf"))
             outputFilename = arg;
+        else if (!arg.trimmed().isEmpty())
+            header = new QString( arg.trimmed() );
         else
             out << "unrecognized argument '" << arg << "'\n";
     }
-
+    
     if(filename1.isEmpty() || filename2.isEmpty() || outputFilename.isEmpty()){
     	out << "You must provide both the before/after files, and a path to the output file. Exiting…\n";
 
@@ -180,34 +180,41 @@ int main(int argc, char *argv[])
     	return 21;
     }
     
-    out << pdf1->numPages() << " // " << pdf2->numPages() << "\n";
+    // Ok, so we've made it this far - let's make sure we have a legitimate header for the resultant file
+    
+    if(header->trimmed().isEmpty()){
+        QString newHeader = QString( "PDF Comparison - %1 vs. %2" ).arg( filename1, filename2 );
+        header = new QString( newHeader );
+    }
+    
+    // out << *header << "\n";
+    // return 10;
+    
+    // out << pdf1->numPages() << " // " << pdf2->numPages() << "\n";
 
     int minIndex = 0;
     int maxIndex = std::max(pdf1->numPages(),pdf2->numPages());
-
+    
     // // return 10;
-
+    
     // out << "WOOT"  << "\n";;
     // out << filename1 << " / " << filename2 << " / " << outputFilename << "\n";;
-
+    
 	/*
 	 *
 	 */
-
-	    // MainWindow window(debug, comparisonMode, filename1, filename2,
-            // language.left(2)); // We want de not de_DE etc.
-
+    
 	MainWindow *window   = new MainWindow( DebugShowTexts, comparisonMode, filename1, filename2, "en" );
 	window->saveFilename = outputFilename;
 	window->savePages    = SaveBothPages;
 	window->setFile1( filename1 );
 	window->setFile2( filename2 );
-
+    
     out << window->filename1LineEdit->text() << " / " << window->filename2LineEdit->text() << "\n";
     
 	window->compare();
-
-	window->saveAsPdf( minIndex, maxIndex, pdf1, pdf2, header );
-
+    
+	window->saveAsPdf( minIndex, maxIndex, pdf1, pdf2, *header );
+    
     return 2;
 }

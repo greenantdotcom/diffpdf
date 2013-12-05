@@ -105,10 +105,10 @@ int main(int argc, char *argv[])
     foreach (const QString arg, args) {
         if (optionsOK && (arg == "--appearance" || arg == "-a"))
             comparisonMode = CompareAppearance;
-        // else if (optionsOK && (arg == "--characters" || arg == "-c"))
-        //     comparisonMode = CompareCharacters;
-        // else if (optionsOK && (arg == "--words" || arg == "-w"))
-        //     comparisonMode = CompareWords;
+        else if (optionsOK && (arg == "--characters" || arg == "-c"))
+            comparisonMode = CompareCharacters;
+        else if (optionsOK && (arg == "--words" || arg == "-w"))
+            comparisonMode = CompareWords;
         else if (optionsOK && arg.startsWith(LanguageOption))
             language = arg.mid(LanguageOption.length());
         else if (optionsOK && (arg == "--help" || arg == "-h")) {
@@ -182,8 +182,8 @@ int main(int argc, char *argv[])
     
     out << pdf1->numPages() << " // " << pdf2->numPages() << "\n";
 
-    // int minIndex = 0;
-    // int maxIndex = std::max(pdf1->numPages(),pdf2->numPages());
+    int minIndex = 0;
+    int maxIndex = std::max(pdf1->numPages(),pdf2->numPages());
 
     // // return 10;
 
@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 
     out << window->filename1LineEdit->text() << " / " << window->filename2LineEdit->text() << "\n";
     
-	// window->compare();
+	window->compare();
 
 	window->saveAsPdf( minIndex, maxIndex, pdf1, pdf2, header );
 
